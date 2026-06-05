@@ -1,0 +1,140 @@
+name: Mirror Subtree
+description: >-
+  Force-push a subdirectory (subtree) of the current repo to a mirror
+  repository using an SSH deploy key. Extracts the subtree with
+  `git subtree split` (re-rooted history) and pushes it. Self-contained:
+  checks out full history, loads the key, splits, and pushes.
+
+inputs:
+  target-repo:
+    description: "SSH URL of the mirror repo, e.g. git@github.com:owner/repo.git"
+    required: true
+  prefix:
+    description: "Subdirectory to mirror, relative to repo root (e.g. apps/web). No trailing slash needed."
+    required: true
+  ssh-private-key:
+    description: >-
+      SSH private key whose public half is added as a write deploy key on the
+      mirror repo. Pass the repo's existing SSH secret from the caller workflow.
+    required: true
+  sync-branches:
+    description: "Space-separated source branches to mirror (e.g. 'main staging')."
+    required: false
+    default: main
+  target-branch:
+    description: >-
+      Branch name to push to on the mirror. When set, sync-branches must be a
+      single branch (its subtree is pushed to target-branch). Leave empty to
+      mirror each source branch to a same-named target branch.
+    required: false
+  git-user-name:
+    description: >-
+      Git committer name for an empty sync commit appended after the split.
+      Leave both this and git-user-email empty to push the split as-is.
+    required: false
+  git-user-email:
+    description: >-
+      Git committer email for the empty sync commit. Leave both this and
+      git-user-name empty to push the split as-is.
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout (full history)
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+        persist-credentials: false
+
+    - name: Load mirror deploy key
+      uses: webfactory/ssh-agent@v0.10.0
+      with:
+        ssh-private-key: ${{ inputs.ssh-private-key }}
+
+    - name: Trust GitHub SSH host
+      shell: bash
+      run: |
+        mkdir -p ~/.ssh
+        ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+    - name: Verify git subtree is available
+      shell: bash
+      run: |
+        subtree="$(git --exec-path)/git-subtree"
+        if [ ! -x "$subtree" ]; then
+          echo "git-subtree is required but not found at $subtree"
+          exit 1
+        fi
+
+    - name: Verify source objects
+      shell: bash
+      run: git fsck --no-dangling
+
+    - name: Configure git identity
+      if: inputs.git-user-name != '' && inputs.git-user-email != ''
+      shell: bash
+      env:
+        GIT_USER_NAME: ${{ inputs.git-user-name }}
+        GIT_USER_EMAIL: ${{ inputs.git-user-email }}
+      run: |
+        git config user.name "$GIT_USER_NAME"
+        git config user.email "$GIT_USER_EMAIL"
+
+    - name: Add mirror remote
+      shell: bash
+      env:
+        TARGET_REPO: ${{ inputs.target-repo }}
+      run: git remote add mirror "$TARGET_REPO"
+
+    - name: Validate inputs
+      shell: bash
+      env:
+        SYNC_BRANCHES: ${{ inputs.sync-branches }}
+        TARGET_BRANCH: ${{ inputs.target-branch }}
+        PREFIX: ${{ inputs.prefix }}
+      run: |
+        set -euo pipefail
+        if [ -z "${PREFIX// /}" ]; then
+          echo "prefix is required"; exit 1
+        fi
+        count=0
+        for branch in $SYNC_BRANCHES; do
+          git check-ref-format --branch "$branch" >/dev/null
+          echo "ok: source branch $branch"
+          count=$((count + 1))
+        done
+        if [ -n "$TARGET_BRANCH" ]; then
+          git check-ref-format --branch "$TARGET_BRANCH" >/dev/null
+          if [ "$count" -ne 1 ]; then
+            echo "target-branch requires exactly one sync-branch (got $count)"; exit 1
+          fi
+          echo "ok: target branch $TARGET_BRANCH"
+        fi
+
+    - name: Split and push subtree
+      shell: bash
+      env:
+        SYNC_BRANCHES: ${{ inputs.sync-branches }}
+        TARGET_BRANCH: ${{ inputs.target-branch }}
+        PREFIX: ${{ inputs.prefix }}
+        DO_COMMIT: ${{ inputs.git-user-name != '' && inputs.git-user-email != '' }}
+      run: |
+        set -euo pipefail
+        for branch in $SYNC_BRANCHES; do
+          echo "Checking out $branch from origin"
+          git checkout -B "$branch" "refs/remotes/origin/$branch"
+          echo "Splitting subtree '$PREFIX' from $branch"
+          split_sha="$(git subtree split --prefix="$PREFIX" "$branch" | tail -n1)"
+          if [ -z "$split_sha" ]; then
+            echo "subtree split produced no commit for prefix '$PREFIX' on $branch"; exit 1
+          fi
+          echo "  split -> $split_sha"
+          target="${TARGET_BRANCH:-$branch}"
+          git checkout -B __subtree_push "$split_sha"
+          if [ "$DO_COMMIT" = "true" ]; then
+            git commit --allow-empty -m "chore: sync"
+          fi
+          echo "Pushing subtree -> mirror/$target"
+          git push mirror "refs/heads/__subtree_push:refs/heads/$target" --force --no-thin
+        done
