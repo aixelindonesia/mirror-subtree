@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: aixelindonesia/mirror-subtree@v1
+      - uses: aixelindonesia/mirror-subtree@v2
         with:
           target-repo: git@github.com:OWNER/REPO.git
           prefix: apps/web
@@ -52,17 +52,15 @@ jobs:
 | `target-repo`     | yes      | —                    | SSH URL of the mirror, `git@github.com:owner/repo.git`                       |
 | `prefix`          | yes      | —                    | Subdirectory to mirror, relative to repo root (e.g. `apps/web`)             |
 | `ssh-private-key` | yes      | —                    | Private key; pass the repo's existing SSH secret                            |
-| `sync-branches`   | no       | `main`               | Space-separated source branches, e.g. `"main staging"`                      |
-| `target-branch`   | no       | — (same name)        | Push to this branch on the mirror; requires a single `sync-branches` value  |
+| `sync-branches`   | no       | `main`               | Space-separated source branches or `source:target` mappings, e.g. `"main staging"` or `"dev:main"` |
 | `git-user-name`   | no       | — (skips commit)     | Committer name for the empty sync commit; needs `git-user-email` too        |
 | `git-user-email`  | no       | — (skips commit)     | Committer email; needs `git-user-name` too                                  |
 
 ## Branch mapping
 
-- By default each source branch is mirrored to a **same-named** branch on the
-  mirror (`dev` → `dev`, `main` → `main`).
-- Set `target-branch` to remap, e.g. monorepo `dev` → mirror `main`. When
-  `target-branch` is set, `sync-branches` must be a single branch.
+- `sync-branches: dev` mirrors source `dev` to mirror `dev`.
+- `sync-branches: dev:main` mirrors source `dev` to mirror `main`.
+- Multiple entries are supported, e.g. `sync-branches: "dev:main staging:preview"`.
 
 ## One-time setup per consuming repo
 
@@ -84,12 +82,12 @@ jobs:
 - `git subtree split` is O(history) — it walks the full history each run. On large
   monorepos this can be slow; bump `timeout-minutes` accordingly.
 - The push is `--force` — the mirror branch is overwritten; treat it as one-way.
-- When both `git-user-name` and `git-user-email` are set, each run appends an
-  empty `chore: sync` commit on top of the split. Leave both empty to push the
-  split verbatim.
+- When both `git-user-name` and `git-user-email` are set, each mirrored entry
+  appends an empty `chore: sync` commit on top of the split. Leave both empty to
+  push the split verbatim.
 - Filter `on.push.paths` to the prefix so the mirror only runs when the subtree
   actually changes.
 
 ## Versioning
 
-Consumers pin `@v1`. Releases are cut as `vX.Y.Z` tags with a moving `vX` tag.
+Consumers pin `@v2`. Releases are cut as `vX.Y.Z` tags with a moving `vX` tag.

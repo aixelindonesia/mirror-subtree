@@ -18,15 +18,11 @@ inputs:
       mirror repo. Pass the repo's existing SSH secret from the caller workflow.
     required: true
   sync-branches:
-    description: "Space-separated source branches to mirror (e.g. 'main staging')."
+    description: >-
+      Space-separated source branches or source:target mappings to mirror (e.g.
+      'main staging' or 'dev:main staging:preview').
     required: false
     default: main
-  target-branch:
-    description: >-
-      Branch name to push to on the mirror. When set, sync-branches must be a
-      single branch (its subtree is pushed to target-branch). Leave empty to
-      mirror each source branch to a same-named target branch.
-    required: false
   git-user-name:
     description: >-
       Git committer name for an empty sync commit appended after the split.
@@ -91,50 +87,51 @@ runs:
       shell: bash
       env:
         SYNC_BRANCHES: ${{ inputs.sync-branches }}
-        TARGET_BRANCH: ${{ inputs.target-branch }}
         PREFIX: ${{ inputs.prefix }}
       run: |
         set -euo pipefail
         if [ -z "${PREFIX// /}" ]; then
           echo "prefix is required"; exit 1
         fi
-        count=0
-        for branch in $SYNC_BRANCHES; do
-          git check-ref-format --branch "$branch" >/dev/null
-          echo "ok: source branch $branch"
-          count=$((count + 1))
-        done
-        if [ -n "$TARGET_BRANCH" ]; then
-          git check-ref-format --branch "$TARGET_BRANCH" >/dev/null
-          if [ "$count" -ne 1 ]; then
-            echo "target-branch requires exactly one sync-branch (got $count)"; exit 1
+        for spec in $SYNC_BRANCHES; do
+          case "$spec" in
+            *:*:*) echo "invalid sync-branches entry '$spec': expected source or source:target"; exit 1 ;;
+            *:*) source="${spec%%:*}"; target="${spec#*:}" ;;
+            *) source="$spec"; target="$spec" ;;
+          esac
+          if [ -z "$source" ] || [ -z "$target" ]; then
+            echo "invalid sync-branches entry '$spec': source and target are required"; exit 1
           fi
-          echo "ok: target branch $TARGET_BRANCH"
-        fi
+          git check-ref-format --branch "$source" >/dev/null
+          git check-ref-format --branch "$target" >/dev/null
+          echo "ok: $source -> $target"
+        done
 
     - name: Split and push subtree
       shell: bash
       env:
         SYNC_BRANCHES: ${{ inputs.sync-branches }}
-        TARGET_BRANCH: ${{ inputs.target-branch }}
         PREFIX: ${{ inputs.prefix }}
         DO_COMMIT: ${{ inputs.git-user-name != '' && inputs.git-user-email != '' }}
       run: |
         set -euo pipefail
-        for branch in $SYNC_BRANCHES; do
-          echo "Checking out $branch from origin"
-          git checkout -B "$branch" "refs/remotes/origin/$branch"
-          echo "Splitting subtree '$PREFIX' from $branch"
-          split_sha="$(git subtree split --prefix="$PREFIX" "$branch" | tail -n1)"
+        for spec in $SYNC_BRANCHES; do
+          case "$spec" in
+            *:*) source="${spec%%:*}"; target="${spec#*:}" ;;
+            *) source="$spec"; target="$spec" ;;
+          esac
+          echo "Checking out $source from origin"
+          git checkout -B "$source" "refs/remotes/origin/$source"
+          echo "Splitting subtree '$PREFIX' from $source"
+          split_sha="$(git subtree split --prefix="$PREFIX" "$source" | tail -n1)"
           if [ -z "$split_sha" ]; then
-            echo "subtree split produced no commit for prefix '$PREFIX' on $branch"; exit 1
+            echo "subtree split produced no commit for prefix '$PREFIX' on $source"; exit 1
           fi
           echo "  split -> $split_sha"
-          target="${TARGET_BRANCH:-$branch}"
           git checkout -B __subtree_push "$split_sha"
           if [ "$DO_COMMIT" = "true" ]; then
             git commit --allow-empty -m "chore: sync"
           fi
-          echo "Pushing subtree -> mirror/$target"
+          echo "Pushing subtree $source -> mirror/$target"
           git push mirror "refs/heads/__subtree_push:refs/heads/$target" --force --no-thin
         done
