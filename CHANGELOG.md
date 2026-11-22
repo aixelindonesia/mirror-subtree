@@ -1,6 +1,7 @@
----
-bump: patch
----
+# Changelog
+
+## v2.0.1 - 2026-11-22
+
 ### Changed
 
 - The action file is `action.yaml`; callers of `aixelindonesia/mirror-subtree@v2` need no change.
