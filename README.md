@@ -1,13 +1,22 @@
+<!-- readme:product -->
 # mirror-subtree
 
-A composite GitHub Action that force-pushes a **subdirectory (subtree)** of the
-current repository to a **mirror repo** using an SSH deploy key. The subtree is
-extracted with `git subtree split` (re-rooted history — the prefix becomes the
-repo root) and force-pushed. Sibling of
-[`mirror-repo`](https://github.com/aixelindonesia/mirror-repo), which mirrors a
-whole repository.
+A composite GitHub Action that force-pushes one subdirectory of the current repository to a mirror repository using an SSH deploy key.
+It extracts the subdirectory with `git subtree split`, so the prefix becomes the mirror's root; its sibling [`mirror-repo`](https://github.com/aixelindonesia/mirror-repo) mirrors a whole repository.
 
-## Usage
+<!-- readme:contents -->
+## What is inside
+
+| Path | What it holds |
+| --- | --- |
+| [`action.yaml`](action.yaml) | The composite action: its inputs and steps. |
+| [`CHANGELOG.md`](CHANGELOG.md) | The releases, folded from `.changes/` by [`scripts/assemble-changelog.mjs`](scripts/assemble-changelog.mjs). |
+| [`docs/`](docs/README.md) | What it is, why it exists, its glossary, how it works, and how to verify a change. |
+
+<!-- readme:usage -->
+## Use it
+
+Add this caller as `.github/workflows/mirror-subtree.yaml`:
 
 ```yaml
 name: Mirror Subtree
@@ -18,8 +27,7 @@ on:
     paths: ['apps/web/**']
   workflow_dispatch:
 
-permissions:
-  contents: read
+permissions: {}
 
 concurrency:
   group: mirror-subtree-${{ github.ref }}
@@ -27,10 +35,12 @@ concurrency:
 
 jobs:
   mirror:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-26.04' }}
     timeout-minutes: 15
+    permissions:
+      contents: read
     steps:
-      - uses: aixelindonesia/mirror-subtree@v2
+      - uses: aixelindonesia/mirror-subtree@bd0d9d54b128af4b0b553877d0a8321b68380989 # v2.0.0
         with:
           target-repo: git@github.com:OWNER/REPO.git
           prefix: apps/web
@@ -38,14 +48,11 @@ jobs:
           ssh-private-key: ${{ secrets.PERSONAL_REPO_SSH_KEY }}
 ```
 
-> The action does its own `checkout` (full history) — the caller workflow needs
-> no separate checkout step. Full history is required for `git subtree split`.
->
-> The SSH secret name is the **caller's** choice — pass whatever secret the repo
-> already has (`PERSONAL_REPO_SSH_KEY`, `PRIVATE_REPO_SSH_KEY`, etc.). The action
-> never hardcodes it.
+The action checks out the full history itself, which `git subtree split` needs, so the caller has no checkout step.
+The SSH secret name is the caller's: pass the secret the repository already has, such as `PERSONAL_REPO_SSH_KEY` or `PRIVATE_REPO_SSH_KEY`.
+Take a later version by moving the pin to the commit of a newer `vX.Y.Z` tag; Renovate does this for a repository that extends the org preset.
 
-## Inputs
+### Inputs
 
 | Input             | Required | Default              | Description                                                                 |
 | ----------------- | -------- | -------------------- | --------------------------------------------------------------------------- |
@@ -56,13 +63,13 @@ jobs:
 | `git-user-name`   | no       | — (skips commit)     | Committer name for the empty sync commit; needs `git-user-email` too        |
 | `git-user-email`  | no       | — (skips commit)     | Committer email; needs `git-user-name` too                                  |
 
-## Branch mapping
+### Branch mapping
 
 - `sync-branches: dev` mirrors source `dev` to mirror `dev`.
 - `sync-branches: dev:main` mirrors source `dev` to mirror `main`.
 - Multiple entries are supported, e.g. `sync-branches: "dev:main staging:preview"`.
 
-## One-time setup per consuming repo
+### One-time setup per consuming repo
 
 1. Generate a keypair (no passphrase):
    ```bash
@@ -72,9 +79,9 @@ jobs:
 3. **Source repo** → Settings → Secrets and variables → Actions → add the
    **private** key as a secret (any name), and reference that name in
    `ssh-private-key`.
-4. Add the caller workflow above as `.github/workflows/mirror-subtree.yml`.
+4. Add the caller workflow above as `.github/workflows/mirror-subtree.yaml`.
 
-## Notes
+### Notes
 
 - History is **re-rooted**: only commits touching `prefix` are kept, with the
   prefix stripped so its contents sit at the mirror's root. Split commit SHAs are
@@ -88,6 +95,9 @@ jobs:
 - Filter `on.push.paths` to the prefix so the mirror only runs when the subtree
   actually changes.
 
-## Versioning
+<!-- readme:changing -->
+## Changing this repository
 
-Consumers pin `@v2`. Releases are cut as `vX.Y.Z` tags with a moving `vX` tag.
+[`AGENTS.md`](AGENTS.md) holds the rules for a change; [Verify a change](docs/how-to/verify-change.md) says how to prove one.
+Releases are SemVer `vX.Y.Z` tags with a moving major tag `v2`, by [changelog's versioning guideline](https://github.com/aixelindonesia/changelog/blob/main/guidelines/versioning.md).
+Which repository owns each neighbouring subject is in [Where guidance lives](https://github.com/aixelindonesia/how-we-build/blob/main/guidelines/where-guidance-lives.md).
