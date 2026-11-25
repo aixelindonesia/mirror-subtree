@@ -1,7 +1,3 @@
----
-status: draft
----
-
 # What mirror-subtree is
 
 `mirror-subtree` is a composite GitHub Action that splits one subdirectory of the calling repository with `git subtree split` and force-pushes the result to a mirror repository over SSH with a deploy key.

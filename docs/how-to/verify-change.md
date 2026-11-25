@@ -1,7 +1,3 @@
----
-status: draft
----
-
 # Verify a change
 
 The repository has no package and no Taskfile; a change passes these checks before merge.

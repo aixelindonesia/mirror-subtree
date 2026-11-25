@@ -1,7 +1,3 @@
----
-status: draft
----
-
 # Glossary
 
 | Term | Meaning here | Not to be confused with |

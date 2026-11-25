@@ -1,7 +1,3 @@
----
-status: draft
----
-
 # Why mirror-subtree exists
 
 Each entry says what goes wrong, who pays for it, how it is recognised, and the page that answers it.
