@@ -237,8 +237,9 @@ export const nextVersion = ({ scheme, tags, bumps, today, requested }) => {
   }
   const rank = Math.max(...bumps.map((bump) => BUMPS.indexOf(bump ?? '')))
   const [major, minor, patch] = latest
-  if (rank === 2) return { version: `${major + 1}.0.0` }
-  if (rank === 1) return { version: `${major}.${minor + 1}.0` }
+  // Below 1.0.0 a breaking change moves the minor; 1.0.0 is always requested.
+  if (rank === 2 && major > 0) return { version: `${major + 1}.0.0` }
+  if (rank >= 1) return { version: `${major}.${minor + 1}.0` }
   return { version: `${major}.${minor}.${patch + 1}` }
 }
 

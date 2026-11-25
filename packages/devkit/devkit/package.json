@@ -1,0 +1,16 @@
+{
+  "name": "@aixel-id/devkit",
+  "version": "2.0.0",
+  "description": "Copies a tool from its owner into packages/<owner>/<tool>/ and fails on a copy that drifts from devkit.lock.json.",
+  "license": "UNLICENSED",
+  "bin": {
+    "devkit": "./devkit.mjs"
+  },
+  "files": [
+    "devkit.mjs"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  }
+}
