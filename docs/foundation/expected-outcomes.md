@@ -1,7 +1,3 @@
----
-status: draft
----
-
 # Expected outcomes
 
 ## Success criteria

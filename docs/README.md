@@ -1,7 +1,3 @@
----
-status: draft
----
-
 # mirror-subtree documentation
 
 - [What it is](foundation/what-it-is.md)

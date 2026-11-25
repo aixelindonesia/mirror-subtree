@@ -1,7 +1,3 @@
----
-status: draft
----
-
 # Architecture
 
 The action is one composite [`action.yaml`](../../action.yaml) whose steps run in the caller's job.
