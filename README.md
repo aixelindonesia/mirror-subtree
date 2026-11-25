@@ -10,7 +10,8 @@ It extracts the subdirectory with `git subtree split`, so the prefix becomes the
 | Path | What it holds |
 | --- | --- |
 | [`action.yaml`](action.yaml) | The composite action: its inputs and steps. |
-| [`CHANGELOG.md`](CHANGELOG.md) | The releases, folded from `.changes/` by [`scripts/assemble-changelog.mjs`](scripts/assemble-changelog.mjs). |
+| [`CHANGELOG.md`](CHANGELOG.md) | The releases, folded from `.changes/` by [`packages/devkit/changelog/assemble-changelog.mjs`](packages/devkit/changelog/assemble-changelog.mjs). |
+| [`packages/devkit/`](packages/devkit) | Read-only copies of `devkit`'s tools, recorded in `devkit.lock.json`; a change goes to `aixelindonesia/devkit`. |
 | [`docs/`](docs/README.md) | What it is, why it exists, its glossary, how it works, and how to verify a change. |
 
 <!-- readme:usage -->

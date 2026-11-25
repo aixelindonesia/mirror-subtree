@@ -1,0 +1,24 @@
+{
+  "tools": {
+    "devkit/changelog": {
+      "source": "git@github.com:aixelindonesia/devkit.git",
+      "ref": "v2.1.0",
+      "commit": "93f665ec229f434a73d305cd770a1b69e9a8f9d8",
+      "files": {
+        "assemble-changelog.mjs": "9fc55fb919cf1e4fd92361d61f80e030bf0196819a5d59911ec6ae8b8c29601e",
+        "package.json": "937687d406419c90f6d07c2868d5e70a18932005fdcfc6312d2a80be4520d9c5",
+        "README.md": "35e3b34615bae7d9bdf64307a3687bd511bfaecbdbee49f15b63161f8e6d042a"
+      }
+    },
+    "devkit/devkit": {
+      "source": "git@github.com:aixelindonesia/devkit.git",
+      "ref": "v2.1.0",
+      "commit": "93f665ec229f434a73d305cd770a1b69e9a8f9d8",
+      "files": {
+        "devkit.mjs": "99894cc8ee5c2aecb45e860b4f1183078e7c11f12226e690996b4f6b60da3bc6",
+        "package.json": "4135ae841ce2b6eba819fc00d9998ffccdc088abcaacc744177c37bb28d1391d",
+        "README.md": "1b636ef1e4e65f3cb1e7b8f2e31bfa9b5b5f9251369255276d99ae3464a35430"
+      }
+    }
+  }
+}

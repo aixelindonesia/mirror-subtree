@@ -1,0 +1,19 @@
+{
+  "name": "@aixel-id/changelog",
+  "version": "2.0.0",
+  "description": "Folds the fragments in .changes/ into a release of CHANGELOG.md.",
+  "license": "UNLICENSED",
+  "bin": {
+    "assemble-changelog": "./assemble-changelog.mjs"
+  },
+  "files": [
+    "assemble-changelog.mjs"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./assemble-changelog.mjs"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
